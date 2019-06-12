@@ -84,6 +84,8 @@ def convert_worker(message, url):
 
     mpd_url = mpd_urls[0]
 
+    print('Downloading {} -> {}'.format(url, mpd_url))
+
     # Start youtube-dl
     update_status_message(status_message, message_converting.format('0%'))
     try:
@@ -137,7 +139,7 @@ def convert_worker(message, url):
         "-of", "csv=s=x:p=0",
         filename
     ], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
-    video_width, video_height = video_props.split("x")
+    video_width, video_height = video_props.split('\n', 1)[0].split('x')
 
     # Upload to Telegram
     update_status_message(status_message, message_uploading)
@@ -161,6 +163,8 @@ def convert_worker(message, url):
     # Clean up
     mp4.close()
     rm(filename)
+
+    print('Done with {}'.format(url))
 
 
 tokenfile = "token.txt"
