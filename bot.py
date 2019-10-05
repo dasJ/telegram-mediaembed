@@ -64,25 +64,28 @@ def convert_worker(message, url):
     status_message = bot.reply_to(message, message_starting, parse_mode="HTML")
 
     # Try to fetch mpd URL
-    try:
-        r = requests.get(url, headers=HEADERS)
-    except:
-        update_status_message(status_message, error_downloading)
-        return
+    if 'mediaembed' in url:
+        try:
+            r = requests.get(url, headers=HEADERS)
+        except:
+            update_status_message(status_message, error_downloading)
+            return
 
-    # Something went wrong on the server side
-    if r.status_code != 200:
-        update_status_message(status_message,
-                              error_wrong_code.format(r.status_code))
-        return
+        # Something went wrong on the server side
+        if r.status_code != 200:
+            update_status_message(status_message,
+                                  error_wrong_code.format(r.status_code))
+            return
 
-    # Regex out the URL
-    mpd_urls = re.findall('data-mpd-url="([^"]*)"', r.text)
-    if len(mpd_urls) != 1:
-        update_status_message(status_message, error_downloading)
-        return
+        # Regex out the URL
+        mpd_urls = re.findall('data-mpd-url="([^"]*)"', r.text)
+        if len(mpd_urls) != 1:
+            update_status_message(status_message, error_downloading)
+            return
 
-    mpd_url = mpd_urls[0]
+        mpd_url = mpd_urls[0]
+    else:
+        mpd_url = url
 
     print('Downloading {} -> {}'.format(url, mpd_url))
 
@@ -186,17 +189,31 @@ def start_help(message):
     bot.send_message(message.chat.id, message_help, parse_mode="HTML")
 
 
-# Handle URLs
-URL_REGEXP = r"(https:\/\/(www\.)?reddit.com/mediaembed.*)"
-@bot.message_handler(regexp=URL_REGEXP)
+# Handle mediaembed
+ME_REGEXP = r"(https:\/\/(www\.)?reddit.com/mediaembed.*)"
+@bot.message_handler(regexp=ME_REGEXP)
 def handle_urls(message):
     # Grab first found link
-    url = re.findall(URL_REGEXP, message.text)[0]
+    url = re.findall(ME_REGEXP, message.text)[0]
     threading.Thread(
         target=convert_worker,
         kwargs={
             "message": message,
             "url": url[0]
+        }
+    ).start()
+
+# Handle v.redd.it
+V_REGEXP = r"(https:\/\/v.redd.it/.*)"
+@bot.message_handler(regexp=V_REGEXP)
+def handle_urls(message):
+    # Grab first found link
+    url = re.findall(V_REGEXP, message.text)[0]
+    threading.Thread(
+        target=convert_worker,
+        kwargs={
+            "message": message,
+            "url": url
         }
     ).start()
 
